@@ -6,6 +6,9 @@ import {
   ScrollView,
   Alert,
   Button,
+  TextInput,
+  Modal,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,11 +27,50 @@ interface Transaction {
 const HomeScreen: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isListening, setIsListening] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<string>('Unknown');
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitNames, setSplitNames] = useState('');
+  const [currentTransaction, setCurrentTransaction] = useState<Omit<Transaction, 'id' | 'splitWith'> | null>(null);
 
   useEffect(() => {
     loadTransactions();
+    checkPermissions();
     setupNotificationListener();
   }, []);
+
+  const checkPermissions = async () => {
+    try {
+      setPermissionStatus('Checking...');
+      // For now, set as "Manual Setup Required" since notification listener requires special setup
+      setPermissionStatus('Manual Setup Required');
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      setPermissionStatus('Error');
+    }
+  };
+
+  const requestPermissions = async () => {
+    Alert.alert(
+      'Notification Access Required',
+      'To listen for real Google Wallet notifications, you need to:\n\n1. Go to Settings → Apps → Special app access → Notification access\n2. Find TapAndTrack and enable it\n\nFor now, you can test with the "Test Transaction" button!',
+      [
+        { text: 'OK', onPress: () => setPermissionStatus('Setup Instructions Shown') }
+      ]
+    );
+  };
+
+  const testTransaction = () => {
+    // Simulate a Google Wallet notification for testing
+    const testNotificationTexts = [
+      'You paid $15.67 at Starbucks with Google Pay',
+      'Google Pay: $8.50 charged at McDonald\'s',
+      'Payment of $25.00 at Target using Google Wallet',
+      'You spent $12.34 at Subway with Google Pay'
+    ];
+
+    const randomText = testNotificationTexts[Math.floor(Math.random() * testNotificationTexts.length)];
+    handleNotificationReceived(randomText);
+  };
 
   const loadTransactions = async () => {
     try {
@@ -89,18 +131,28 @@ const HomeScreen: React.FC = () => {
   };
 
   const promptForSplitNames = (transaction: Omit<Transaction, 'id' | 'splitWith'>) => {
-    Alert.prompt(
-      'Split Transaction',
-      'Enter names separated by commas (e.g., "John, Jane, Bob"):',
-      (input) => {
-        if (input) {
-          const names = input.split(',').map(name => name.trim()).filter(name => name.length > 0);
-          saveTransaction(transaction, names);
-        } else {
-          saveTransaction(transaction, []);
-        }
-      }
-    );
+    setCurrentTransaction(transaction);
+    setSplitNames('');
+    setShowSplitModal(true);
+  };
+
+  const handleSplitSubmit = () => {
+    const names = splitNames.split(',').map(name => name.trim()).filter(name => name.length > 0);
+    if (currentTransaction) {
+      saveTransaction(currentTransaction, names);
+    }
+    setShowSplitModal(false);
+    setCurrentTransaction(null);
+    setSplitNames('');
+  };
+
+  const handleSplitCancel = () => {
+    if (currentTransaction) {
+      saveTransaction(currentTransaction, []);
+    }
+    setShowSplitModal(false);
+    setCurrentTransaction(null);
+    setSplitNames('');
   };
 
   const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'splitWith'>, splitWith: string[]) => {
@@ -118,6 +170,35 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const handleDeleteTransaction = (id: string) => {
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+
+    Alert.alert(
+      'Delete Transaction',
+      `Are you sure you want to delete this transaction?\n\n${transaction.merchant} - $${transaction.amount}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await TransactionStorage.deleteById(id);
+              setTransactions(prev => prev.filter(t => t.id !== id));
+            } catch (error) {
+              console.error('Error deleting transaction:', error);
+              Alert.alert('Error', 'Failed to delete transaction. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>TapAndTrack</Text>
@@ -129,6 +210,10 @@ const HomeScreen: React.FC = () => {
         Status: {isListening ? 'Listening for notifications' : 'Not listening'}
       </Text>
 
+      <Text style={styles.permissionStatus}>
+        Permissions: {permissionStatus}
+      </Text>
+
       <ScrollView style={styles.transactionsList}>
         <Text style={styles.sectionTitle}>Transactions:</Text>
 
@@ -137,6 +222,16 @@ const HomeScreen: React.FC = () => {
         ) : (
           transactions.map((transaction) => (
             <View key={transaction.id} style={styles.transactionCard}>
+              <View style={styles.transactionHeader}>
+                <Text style={styles.transactionTitle}>
+                  {transaction.merchant} - ${transaction.amount}
+                </Text>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteTransaction(transaction.id)}>
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.transactionJson}>
                 {JSON.stringify(transaction, null, 2)}
               </Text>
@@ -146,8 +241,47 @@ const HomeScreen: React.FC = () => {
       </ScrollView>
 
       <View style={styles.actions}>
+        <Button title="Test Transaction" onPress={testTransaction} />
+        <View style={styles.buttonSpacing} />
+        <Button title="Request Permissions" onPress={requestPermissions} />
+        <View style={styles.buttonSpacing} />
         <Button title="Refresh" onPress={loadTransactions} />
       </View>
+
+      {/* Split Names Modal */}
+      <Modal
+        visible={showSplitModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleSplitCancel}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Split Transaction</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter names separated by commas (e.g., "John, Jane, Bob"):
+            </Text>
+
+            <TextInput
+              style={styles.textInput}
+              value={splitNames}
+              onChangeText={setSplitNames}
+              placeholder="Enter names here..."
+              multiline={false}
+              autoFocus={true}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={handleSplitCancel}>
+                <Text style={styles.cancelButtonText}>Skip Split</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleSplitSubmit}>
+                <Text style={styles.submitButtonText}>Save Split</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -173,10 +307,19 @@ const styles = StyleSheet.create({
   status: {
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     padding: 8,
     backgroundColor: '#f0f0f0',
     borderRadius: 4,
+  },
+  permissionStatus: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    padding: 8,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 4,
+    color: '#1976d2',
   },
   sectionTitle: {
     fontSize: 18,
@@ -200,6 +343,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  transactionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   transactionJson: {
     fontFamily: 'monospace',
     fontSize: 12,
@@ -207,6 +373,70 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 16,
+  },
+  buttonSpacing: {
+    height: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+    maxWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 16,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    textAlign: 'center',
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: '#2196f3',
+    padding: 12,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  submitButtonText: {
+    textAlign: 'center',
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

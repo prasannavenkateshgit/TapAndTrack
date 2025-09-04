@@ -1,8 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permission for basic notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Permission to read notifications -->
     <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+    <!-- Permission for accessing notification policy -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <application
       android:name=".MainApplication"
@@ -24,7 +28,7 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
-      
+
       <!-- Notification Listener Service for capturing Google Pay notifications -->
       <service
         android:name=".NotificationListenerService"

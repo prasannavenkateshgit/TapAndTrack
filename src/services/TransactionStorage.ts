@@ -61,6 +61,19 @@ class TransactionStorageService {
       return null;
     }
   }
+
+  async deleteById(id: string): Promise<void> {
+    try {
+      const transactions = await this.getAll();
+      const filteredTransactions = transactions.filter(t => t.id !== id);
+
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filteredTransactions));
+      console.log('Transaction deleted:', id);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+  }
 }
 
 export const TransactionStorage = new TransactionStorageService();
