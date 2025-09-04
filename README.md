@@ -1,97 +1,66 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# TapAndTrack
 
-# Getting Started
+A simple React Native app that parses Google Wallet notifications and helps split transactions.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+- 📱 Listens for Google Wallet notifications
+- 💰 Parses transaction amounts and merchant names
+- 👥 Prompts user to split transactions with others
+- 💾 Stores transaction data as JSON objects
+- 📊 Displays all transactions in a simple list
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## What it does
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+1. **Notification Detection**: Detects Google Wallet/Google Pay notifications
+2. **Transaction Parsing**: Extracts amount and merchant from notification text
+3. **Split Prompting**: Asks if you want to split the transaction
+4. **Name Collection**: If splitting, prompts for comma-separated names
+5. **JSON Storage**: Saves all data as JSON objects in local storage
+6. **Simple Display**: Shows raw JSON data on the home screen
 
-```sh
-# Using npm
-npm start
+## Tech Stack
 
-# OR using Yarn
-yarn start
+- React Native 0.81.0
+- TypeScript
+- AsyncStorage for data persistence
+- Minimal dependencies (no navigation libraries, no fancy UI)
+
+## Project Structure
+
+```
+src/
+  screens/
+    HomeScreen.tsx          # Main and only screen
+  services/
+    NotificationListener.ts # Handles notification detection
+    TransactionStorage.ts   # Manages JSON data storage
 ```
 
-## Step 2: Build and run your app
+## Design Philosophy
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+This app follows a **barebones approach**:
+- No complex navigation
+- No fancy UI components
+- No calculations or totals
+- Just parse, prompt, store, and display
+- Keep it simple and functional
 
-### Android
+## Installation
 
-```sh
-# Using npm
-npm run android
+1. Clone this repository
+2. Run `npm install`
+3. Run `npx react-native run-android` or `npx react-native run-ios`
 
-# OR using Yarn
-yarn android
-```
+## Usage
 
-### iOS
+1. Open the app
+2. Grant notification access permissions
+3. Make purchases using Google Wallet/Google Pay
+4. The app will automatically detect notifications and prompt you
+5. Choose whether to split transactions and enter names if needed
+6. View all stored transactions as JSON objects in the app
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## Note
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+This is a minimal implementation focused on core functionality. The notification parsing uses basic regex patterns that may need adjustment based on actual Google Wallet notification formats.
